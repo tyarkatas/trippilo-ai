@@ -1,6 +1,4 @@
 
-import OpenAI from 'openai'
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({
@@ -17,38 +15,60 @@ export default async function handler(req, res) {
       })
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    const apiKey = process.env.GEMINI_API_KEY
+
+    if (!apiKey) {
       return res.status(500).json({
-        error: 'API anahtarı sunucuda ayarlanmamış.'
+        error: 'Gemini API anahtarı sunucuda ayarlanmamış.'
       })
     }
 
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    })
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'Sen TripPilo AI adlı Türkçe seyahat asistanısın. Kullanıcıya anlaşılır bir seyahat planı hazırla. Fiyatları ve müsaitliği doğrulamadan kesin bilgi olarak sunma. Ulaşım, yemek, aktiviteler ve pratik ipuçları öner.'
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey
         },
-        {
-          role: 'user',
-          content: `Destinasyon: ${destination}\nTatil türü: ${travelType || 'Genel gezi'}\nBana örnek bir seyahat planı hazırla.`
-        }
-      ]
-    })
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{
+              text: 'Sen TripPilo AI adlı Türkçe seyahat asistanısın. Kullanıcıya anlaşılır bir seyahat planı hazırla. Fiyatları ve müsaitliği doğrulamadan kesin bilgi olarak sunma. Ulaşım, yemek, aktiviteler ve pratik ipuçları öner.'
+            }]
+          },
+          contents: [{
+            parts: [{
+              text: `Destinasyon: ${destination}\nTatil türü: ${travelType || 'Genel gezi'}\nBana örnek bir seyahat planı hazırla.`
+            }]
+          }]
+        })
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      console.error('Gemini API hatası:', response.status, data.error?.message)
+
+      return res.status(500).json({
+        error: 'Gemini yanıt veremedi. API anahtarını ve kullanım limitini kontrol et.'
+      })
+    }
+
+    const plan = data.candidates?.[0]?.content?.parts
+      ?.map(part => part.text || '')
+      .join('\n')
+      .trim()
 
     return res.status(200).json({
-      plan: completion.choices[0]?.message?.content || 'Plan oluşturulamadı.'
+      plan: plan || 'Plan oluşturulamadı.'
     })
   } catch (error) {
     console.error('TripPilo AI hatası:', error.message)
 
     return res.status(500).json({
-      error: 'Plan oluşturulamadı. API ayarlarını ve kullanım limitini kontrol et.'
+      error: 'Plan oluşturulamadı. Lütfen daha sonra tekrar dene.'
     })
   }
 }
