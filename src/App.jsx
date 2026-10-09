@@ -98,7 +98,6 @@ return (
     © 2026 TripPilo AI · Yeni yerler keşfet.
   </footer>
 </div>
-```
 
 )
 }
