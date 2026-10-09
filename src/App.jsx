@@ -12,61 +12,30 @@ setMessage('Lütfen önce gitmek istediğin şehri yaz.')
 return
 }
 
-setMessage('✈️ Yapay zekâ seyahat planını hazırlıyor...')
+```
+setMessage('✈️ Seyahat planın hazırlanıyor...')
 
 try {
-const response = await fetch('/api/plan', {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json'
-},
-body: JSON.stringify({ destination, travelType })
-})
+  const response = await window.fetch('/api/plan', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ destination, travelType })
+  })
 
-```
-const data = await response.json()
+  const data = await response.json()
 
-if (!response.ok) {
-  throw new Error(data.error || 'Plan oluşturulamadı.')
-}
+  if (!response.ok) {
+    throw new Error(data.error || 'Plan oluşturulamadı.')
+  }
 
-setMessage(data.plan)
-```
-
+  setMessage(data.plan)
 } catch (error) {
-setMessage(error.message || 'Bir hata oluştu. Lütfen tekrar dene.')
+  setMessage(error.message || 'Bir hata oluştu. Lütfen tekrar dene.')
 }
-}
-async function planTrip() {
-if (!destination.trim()) {
-setMessage('Lütfen önce gitmek istediğin şehri yaz.')
-return
-}
-
-setMessage('✈️ Yapay zekâ seyahat planını hazırlıyor...')
-
-try {
-const response = await fetch('/api/plan', {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json'
-},
-body: JSON.stringify({ destination, travelType })
-})
-
-```
-const data = await response.json()
-
-if (!response.ok) {
-  throw new Error(data.error || 'Plan oluşturulamadı.')
-}
-
-setMessage(data.plan)
 ```
 
-} catch (error) {
-setMessage(error.message || 'Bir hata oluştu. Lütfen tekrar dene.')
-}
 }
 
 return (
@@ -102,11 +71,15 @@ return (
       <option>Lüks tatil</option>
     </select>
 
-    <button onClick={planTrip} style={{ width: '100%', padding: '15px', border: 'none', borderRadius: '10px', background: '#168bce', color: 'white' }}>
+    <button onClick={planTrip} style={{ width: '100%', padding: '15px', border: 'none', borderRadius: '10px', background: '#168bce', color: 'white', cursor: 'pointer' }}>
       Seyahatimi Planla →
     </button>
 
-    {message && <p role="status" style={{ padding: '12px', background: '#e8f5ff', borderRadius: '8px' }}>{message}</p>}
+    {message && (
+      <p role="status" style={{ padding: '12px', background: '#e8f5ff', borderRadius: '8px', whiteSpace: 'pre-wrap' }}>
+        {message}
+      </p>
+    )}
   </section>
 
   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginTop: '24px' }}>
@@ -125,7 +98,7 @@ return (
     © 2026 TripPilo AI · Yeni yerler keşfet.
   </footer>
 </div>
-
+```
 
 )
 }
