@@ -7,11 +7,49 @@ const [travelType, setTravelType] = useState('Deniz tatili')
 const [message, setMessage] = useState('')
 const [loading, setLoading] = useState(false)
 
-async function planTrip() {
-  console.log('PLAN BUTONUNA BASILDI', destination, travelType)
 
-  if (!destination.trim()) {
-    setMessage('Lütfen önce gitmek istediğin şehri yaz.')
+async function planTrip() {
+  console.log('TEST 1: Fonksiyon başladı')
+
+  try {
+    console.log('TEST 2: Destinasyon kontrol ediliyor')
+
+    if (!destination.trim()) {
+      setMessage('Lütfen önce gitmek istediğin şehri yaz.')
+      return
+    }
+
+    console.log('TEST 3: Yükleniyor mesajı')
+    setLoading(true)
+    setMessage('Seyahat planın hazırlanıyor...')
+
+    console.log('TEST 4: API isteği gönderiliyor')
+
+    const response = await fetch('/api/plan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ destination, travelType })
+    })
+
+    console.log('TEST 5: API yanıtı', response.status)
+
+    const data = await response.json()
+    console.log('TEST 6: Yanıt içeriği', data)
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Plan oluşturulamadı.')
+    }
+
+    setMessage(data.plan || 'Plan oluşturulamadı.')
+  } catch (error) {
+    console.error('PLAN HATASI:', error)
+    setMessage(error.message || 'Bir hata oluştu.')
+  } finally {
+    setLoading(false)
+  }
+}    setMessage('Lütfen önce gitmek istediğin şehri yaz.')
     return
   }
 
