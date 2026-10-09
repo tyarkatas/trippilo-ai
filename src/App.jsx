@@ -1,57 +1,16 @@
 import { useState } from 'react'
-import './App.css'
 
-function App() {
+export default function App() {
 const [destination, setDestination] = useState('')
-const [travelType, setTravelType] = useState('Deniz tatili')
+const [travelType, setTravelType] = useState('Kültür gezisi')
 const [message, setMessage] = useState('')
 const [loading, setLoading] = useState(false)
 
-
 async function planTrip() {
-  console.log('TEST 1: Fonksiyon başladı')
-
-  try {
-    console.log('TEST 2: Destinasyon kontrol ediliyor')
-
-    if (!destination.trim()) {
-      setMessage('Lütfen önce gitmek istediğin şehri yaz.')
-      return
-    }
-
-    console.log('TEST 3: Yükleniyor mesajı')
-    setLoading(true)
-    setMessage('Seyahat planın hazırlanıyor...')
-
-    console.log('TEST 4: API isteği gönderiliyor')
-
-    const response = await fetch('/api/plan', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ destination, travelType })
-    })
-
-    console.log('TEST 5: API yanıtı', response.status)
-
-    const data = await response.json()
-    console.log('TEST 6: Yanıt içeriği', data)
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Plan oluşturulamadı.')
-    }
-
-    setMessage(data.plan || 'Plan oluşturulamadı.')
-  } catch (error) {
-    console.error('PLAN HATASI:', error)
-    setMessage(error.message || 'Bir hata oluştu.')
-  } finally {
-    setLoading(false)
-  }
-}    setMessage('Lütfen önce gitmek istediğin şehri yaz.')
-    return
-  }
+if (!destination.trim()) {
+setMessage('Lütfen önce gitmek istediğin şehri yaz.')
+return
+}
 
 ```
 setLoading(true)
@@ -63,7 +22,10 @@ try {
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ destination, travelType })
+    body: JSON.stringify({
+      destination: destination.trim(),
+      travelType
+    })
   })
 
   const data = await response.json()
@@ -74,6 +36,7 @@ try {
 
   setMessage(data.plan || 'Plan oluşturulamadı.')
 } catch (error) {
+  console.error('Seyahat planı hatası:', error)
   setMessage(
     error.message || 'Bir hata oluştu. Lütfen tekrar dene.'
   )
@@ -85,140 +48,142 @@ try {
 }
 
 return (
-<div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
+<div
+style={{
+maxWidth: '900px',
+margin: '0 auto',
+padding: '24px',
+fontFamily: 'Arial, sans-serif',
+color: '#1f2937'
+}}
+>
 <header
 style={{
 display: 'flex',
 justifyContent: 'space-between',
 alignItems: 'center',
-flexWrap: 'wrap'
+flexWrap: 'wrap',
+gap: '12px'
 }}
-> <h2>
-✈️ TripPilo <span style={{ color: '#168bce' }}>AI</span> </h2> <span>Akıllı seyahat asistanınız</span> </header>
+>
+<h1 style={{ color: '#2563eb', margin: 0 }}>
+TripPilo AI </h1> <span>Yapay zekâ destekli seyahat planlayıcısı</span> </header>
 
 ```
-  <section
-    style={{
-      background: 'white',
-      padding: '32px',
-      borderRadius: '20px',
-      marginTop: '25px',
-      boxShadow: '0 8px 30px #173b6010'
-    }}
-  >
-    <p style={{ color: '#168bce', fontWeight: 'bold' }}>
-      ✦ YENİ NESİL SEYAHAT DENEYİMİ
-    </p>
+  <main style={{ marginTop: '40px' }}>
+    <h2>Hayalindeki seyahati planla ✈️</h2>
+    <p>Gitmek istediğin şehri ve seyahat türünü seç.</p>
 
-    <h1>Hayalindeki seyahati birlikte planlayalım.</h1>
-    <p>Gitmek istediğin yeri seç, tatil tarzını belirle ve keşfetmeye başla.</p>
+    <label
+      htmlFor="destination"
+      style={{ display: 'block', marginBottom: '8px' }}
+    >
+      Nereye gitmek istiyorsun?
+    </label>
 
-    <label htmlFor="destination">Nereye gitmek istiyorsun?</label>
     <input
       id="destination"
+      type="text"
       value={destination}
-      onChange={(e) => setDestination(e.target.value)}
-      placeholder="Örn. Antalya, İstanbul, Kapadokya"
+      onChange={(event) => setDestination(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' && !loading) {
+          planTrip()
+        }
+      }}
+      placeholder="Örn. İstanbul, Kapadokya, Roma"
       style={{
-        display: 'block',
+        boxSizing: 'border-box',
         width: '100%',
         padding: '14px',
-        margin: '10px 0 20px',
-        border: '1px solid #ccd9e5',
-        borderRadius: '10px',
-        boxSizing: 'border-box'
+        border: '1px solid #cbd5e1',
+        borderRadius: '8px',
+        fontSize: '16px',
+        marginBottom: '18px'
       }}
     />
 
-    <label htmlFor="travelType">Nasıl bir tatil istiyorsun?</label>
+    <label
+      htmlFor="travelType"
+      style={{ display: 'block', marginBottom: '8px' }}
+    >
+      Seyahat türü
+    </label>
+
     <select
       id="travelType"
       value={travelType}
-      onChange={(e) => setTravelType(e.target.value)}
+      onChange={(event) => setTravelType(event.target.value)}
       style={{
-        display: 'block',
+        boxSizing: 'border-box',
         width: '100%',
         padding: '14px',
-        margin: '10px 0 20px',
-        border: '1px solid #ccd9e5',
-        borderRadius: '10px',
-        background: 'white',
-        boxSizing: 'border-box'
+        border: '1px solid #cbd5e1',
+        borderRadius: '8px',
+        fontSize: '16px',
+        marginBottom: '20px',
+        backgroundColor: '#fff'
       }}
     >
-      <option>Deniz tatili</option>
-      <option>Kültür ve gezi</option>
-      <option>Doğa ve macera</option>
-      <option>Aile tatili</option>
-      <option>Lüks tatil</option>
+      <option value="Kültür gezisi">Kültür gezisi</option>
+      <option value="Deniz tatili">Deniz tatili</option>
+      <option value="Doğa tatili">Doğa tatili</option>
+      <option value="Romantik tatil">Romantik tatil</option>
+      <option value="Aile tatili">Aile tatili</option>
+      <option value="Macera">Macera</option>
+      <option value="Yeme içme turu">Yeme içme turu</option>
     </select>
 
     <button
+      type="button"
       onClick={planTrip}
       disabled={loading}
       style={{
         width: '100%',
         padding: '15px',
+        backgroundColor: loading ? '#94a3b8' : '#2563eb',
+        color: '#fff',
         border: 'none',
-        borderRadius: '10px',
-        background: '#168bce',
-        color: 'white',
-        cursor: loading ? 'wait' : 'pointer',
-        opacity: loading ? 0.7 : 1
+        borderRadius: '8px',
+        fontSize: '16px',
+        fontWeight: 'bold',
+        cursor: loading ? 'wait' : 'pointer'
       }}
     >
-      {loading ? 'Plan hazırlanıyor...' : 'Seyahatimi Planla →'}
+      {loading ? 'Plan hazırlanıyor...' : 'Seyahat planımı oluştur'}
     </button>
 
     {message && (
-      <p
+      <div
         role="status"
+        aria-live="polite"
         style={{
-          padding: '12px',
-          background: '#e8f5ff',
+          marginTop: '24px',
+          padding: '18px',
           borderRadius: '8px',
-          whiteSpace: 'pre-wrap'
+          backgroundColor: '#f1f5f9',
+          lineHeight: 1.7,
+          whiteSpace: 'pre-wrap',
+          overflowWrap: 'anywhere'
         }}
       >
         {message}
-      </p>
+      </div>
     )}
-  </section>
+  </main>
 
-  <div
+  <footer
     style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-      gap: '16px',
-      marginTop: '24px'
+      marginTop: '48px',
+      paddingTop: '18px',
+      borderTop: '1px solid #e2e8f0',
+      color: '#64748b',
+      fontSize: '13px'
     }}
   >
-    <article style={{ background: 'white', padding: '22px', borderRadius: '16px' }}>
-      <h2>🏨</h2>
-      <h3>Oteller</h3>
-      <p>Konaklama seçeneklerini keşfet.</p>
-    </article>
-
-    <article style={{ background: 'white', padding: '22px', borderRadius: '16px' }}>
-      <h2>🧭</h2>
-      <h3>Turlar</h3>
-      <p>Sana uygun deneyimleri bul.</p>
-    </article>
-
-    <article style={{ background: 'white', padding: '22px', borderRadius: '16px' }}>
-      <h2>🚗</h2>
-      <h3>Transfer</h3>
-      <p>Ulaşımını kolaylaştır.</p>
-    </article>
-  </div>
-
-  <footer style={{ textAlign: 'center', padding: '30px 0', color: '#687d90' }}>
-    © 2026 TripPilo AI · Yeni yerler keşfet.
+    TripPilo AI · Seyahatini keşfet.
   </footer>
 </div>
 
-
 )
 }
-
-export default App
