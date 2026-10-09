@@ -1,0 +1,62 @@
+* {
+  box-sizing: border-box;
+  }
+
+body {
+margin: 0;
+background: #f2f7fc;
+color: #18324b;
+font-family: Arial, sans-serif;
+}
+
+#root {
+min-height: 100vh;
+}
+
+h1 {
+font-size: 42px;
+line-height: 1.2;
+color: #173b60;
+}
+
+h2 {
+font-size: 28px;
+color: #173b60;
+}
+
+p {
+font-size: 17px;
+line-height: 1.6;
+}
+
+button {
+font-size: 16px;
+font-weight: bold;
+transition: 0.2s;
+}
+
+button:hover {
+background: #086da9 !important;
+transform: translateY(-1px);
+}
+
+input {
+font-size: 16px;
+outline-color: #168bce;
+}
+
+hr {
+border: 0;
+border-top: 1px solid #dbe6ef;
+margin: 32px 0;
+}
+
+@media (max-width: 600px) {
+h1 {
+font-size: 32px;
+}
+
+h2 {
+font-size: 25px;
+}
+}
