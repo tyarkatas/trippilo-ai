@@ -5,6 +5,7 @@ function App() {
 const [destination, setDestination] = useState('')
 const [travelType, setTravelType] = useState('Deniz tatili')
 const [message, setMessage] = useState('')
+const [loading, setLoading] = useState(false)
 
 async function planTrip() {
 if (!destination.trim()) {
@@ -13,10 +14,11 @@ return
 }
 
 ```
+setLoading(true)
 setMessage('✈️ Seyahat planın hazırlanıyor...')
 
 try {
-  const response = await window.fetch('/api/plan', {
+  const response = await fetch('/api/plan', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -30,9 +32,13 @@ try {
     throw new Error(data.error || 'Plan oluşturulamadı.')
   }
 
-  setMessage(data.plan)
+  setMessage(data.plan || 'Plan oluşturulamadı.')
 } catch (error) {
-  setMessage(error.message || 'Bir hata oluştu. Lütfen tekrar dene.')
+  setMessage(
+    error.message || 'Bir hata oluştu. Lütfen tekrar dene.'
+  )
+} finally {
+  setLoading(false)
 }
 ```
 
@@ -40,11 +46,30 @@ try {
 
 return (
 <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
-<header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}> <h2>✈️ TripPilo <span style={{ color: '#168bce' }}>AI</span></h2> <span>Akıllı seyahat asistanınız</span> </header>
+<header
+style={{
+display: 'flex',
+justifyContent: 'space-between',
+alignItems: 'center',
+flexWrap: 'wrap'
+}}
+> <h2>
+✈️ TripPilo <span style={{ color: '#168bce' }}>AI</span> </h2> <span>Akıllı seyahat asistanınız</span> </header>
 
 ```
-  <section style={{ background: 'white', padding: '32px', borderRadius: '20px', marginTop: '25px', boxShadow: '0 8px 30px #173b6010' }}>
-    <p style={{ color: '#168bce', fontWeight: 'bold' }}>✦ YENİ NESİL SEYAHAT DENEYİMİ</p>
+  <section
+    style={{
+      background: 'white',
+      padding: '32px',
+      borderRadius: '20px',
+      marginTop: '25px',
+      boxShadow: '0 8px 30px #173b6010'
+    }}
+  >
+    <p style={{ color: '#168bce', fontWeight: 'bold' }}>
+      ✦ YENİ NESİL SEYAHAT DENEYİMİ
+    </p>
+
     <h1>Hayalindeki seyahati birlikte planlayalım.</h1>
     <p>Gitmek istediğin yeri seç, tatil tarzını belirle ve keşfetmeye başla.</p>
 
@@ -54,7 +79,15 @@ return (
       value={destination}
       onChange={(e) => setDestination(e.target.value)}
       placeholder="Örn. Antalya, İstanbul, Kapadokya"
-      style={{ display: 'block', width: '100%', padding: '14px', margin: '10px 0 20px', border: '1px solid #ccd9e5', borderRadius: '10px' }}
+      style={{
+        display: 'block',
+        width: '100%',
+        padding: '14px',
+        margin: '10px 0 20px',
+        border: '1px solid #ccd9e5',
+        borderRadius: '10px',
+        boxSizing: 'border-box'
+      }}
     />
 
     <label htmlFor="travelType">Nasıl bir tatil istiyorsun?</label>
@@ -62,7 +95,16 @@ return (
       id="travelType"
       value={travelType}
       onChange={(e) => setTravelType(e.target.value)}
-      style={{ display: 'block', width: '100%', padding: '14px', margin: '10px 0 20px', border: '1px solid #ccd9e5', borderRadius: '10px', background: 'white' }}
+      style={{
+        display: 'block',
+        width: '100%',
+        padding: '14px',
+        margin: '10px 0 20px',
+        border: '1px solid #ccd9e5',
+        borderRadius: '10px',
+        background: 'white',
+        boxSizing: 'border-box'
+      }}
     >
       <option>Deniz tatili</option>
       <option>Kültür ve gezi</option>
@@ -71,26 +113,62 @@ return (
       <option>Lüks tatil</option>
     </select>
 
-    <button onClick={planTrip} style={{ width: '100%', padding: '15px', border: 'none', borderRadius: '10px', background: '#168bce', color: 'white', cursor: 'pointer' }}>
-      Seyahatimi Planla →
+    <button
+      onClick={planTrip}
+      disabled={loading}
+      style={{
+        width: '100%',
+        padding: '15px',
+        border: 'none',
+        borderRadius: '10px',
+        background: '#168bce',
+        color: 'white',
+        cursor: loading ? 'wait' : 'pointer',
+        opacity: loading ? 0.7 : 1
+      }}
+    >
+      {loading ? 'Plan hazırlanıyor...' : 'Seyahatimi Planla →'}
     </button>
 
     {message && (
-      <p role="status" style={{ padding: '12px', background: '#e8f5ff', borderRadius: '8px', whiteSpace: 'pre-wrap' }}>
+      <p
+        role="status"
+        style={{
+          padding: '12px',
+          background: '#e8f5ff',
+          borderRadius: '8px',
+          whiteSpace: 'pre-wrap'
+        }}
+      >
         {message}
       </p>
     )}
   </section>
 
-  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginTop: '24px' }}>
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+      gap: '16px',
+      marginTop: '24px'
+    }}
+  >
     <article style={{ background: 'white', padding: '22px', borderRadius: '16px' }}>
-      <h2>🏨</h2><h3>Oteller</h3><p>Konaklama seçeneklerini keşfet.</p>
+      <h2>🏨</h2>
+      <h3>Oteller</h3>
+      <p>Konaklama seçeneklerini keşfet.</p>
     </article>
+
     <article style={{ background: 'white', padding: '22px', borderRadius: '16px' }}>
-      <h2>🧭</h2><h3>Turlar</h3><p>Sana uygun deneyimleri bul.</p>
+      <h2>🧭</h2>
+      <h3>Turlar</h3>
+      <p>Sana uygun deneyimleri bul.</p>
     </article>
+
     <article style={{ background: 'white', padding: '22px', borderRadius: '16px' }}>
-      <h2>🚗</h2><h3>Transfer</h3><p>Ulaşımını kolaylaştır.</p>
+      <h2>🚗</h2>
+      <h3>Transfer</h3>
+      <p>Ulaşımını kolaylaştır.</p>
     </article>
   </div>
 
@@ -98,6 +176,7 @@ return (
     © 2026 TripPilo AI · Yeni yerler keşfet.
   </footer>
 </div>
+
 
 )
 }
