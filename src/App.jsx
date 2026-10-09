@@ -1,4 +1,3 @@
-```jsx
 import { useEffect, useState } from 'react'
 import {
   MapContainer,
@@ -523,4 +522,4 @@ export default function App() {
     </div>
   )
 }
-```
+
