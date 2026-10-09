@@ -24,11 +24,6 @@ const categories = [
   { id: 'transport', label: 'Toplu taşıma', icon: '🚌' }
 ]
 
-const overpassServers = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter'
-]
-
 function getCategory(tags = {}) {
   if (['hospital', 'clinic'].includes(tags.amenity)) return 'hospital'
   if (tags.amenity === 'pharmacy') return 'pharmacy'
@@ -180,50 +175,26 @@ export default function App() {
 
     const [lat, lon] = point
 
-    const query = `
-      [out:json][timeout:25];
-      (
-        node(around:5000,${lat},${lon})[amenity~"restaurant|cafe|hospital|clinic|pharmacy|taxi|atm|fast_food|bus_station"];
-        way(around:5000,${lat},${lon})[amenity~"restaurant|cafe|hospital|clinic|pharmacy|taxi|atm|fast_food|bus_station"];
-        node(around:5000,${lat},${lon})[tourism];
-        way(around:5000,${lat},${lon})[tourism];
-        node(around:5000,${lat},${lon})[historic];
-        way(around:5000,${lat},${lon})[historic];
-        node(around:5000,${lat},${lon})[highway=bus_stop];
-        node(around:5000,${lat},${lon})[public_transport];
-      );
-      out center tags 100;
-    `
-
-    let lastError = null
-
     try {
-      let data = null
+      const response = await fetch('/api/places', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ lat, lon })
+      })
 
-      for (const server of overpassServers) {
-        try {
-          const response = await fetch(server, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: 'data=' + encodeURIComponent(query)
-          })
+      let data
 
-          if (!response.ok) {
-            throw new Error('Sunucu yanıt vermedi: ' + response.status)
-          }
-
-          data = await response.json()
-          break
-        } catch (error) {
-          lastError = error
-        }
+      try {
+        data = await response.json()
+      } catch {
+        throw new Error('Sunucudan geçerli yanıt alınamadı.')
       }
 
-      if (!data) {
+      if (!response.ok) {
         throw new Error(
-          'Mekân verileri alınamadı. İnternet bağlantını kontrol edip tekrar dene.'
+          data.error || 'Mekân verileri alınamadı.'
         )
       }
 
@@ -234,7 +205,11 @@ export default function App() {
           const tags = item.tags || {}
           const category = getCategory(tags)
 
-          if (itemLat == null || itemLon == null || !category) {
+          if (
+            itemLat == null ||
+            itemLon == null ||
+            !category
+          ) {
             return null
           }
 
@@ -243,10 +218,12 @@ export default function App() {
             name:
               tags.name ||
               tags['name:en'] ||
-              categories.find((entry) => entry.id === category)?.label ||
+              categories.find(
+                (entry) => entry.id === category
+              )?.label ||
               'İsimsiz mekân',
-            lat: itemLat,
-            lon: itemLon,
+            lat: Number(itemLat),
+            lon: Number(itemLon),
             category,
             tags
           }
@@ -262,9 +239,7 @@ export default function App() {
       }
     } catch (error) {
       setMapError(
-        error.message ||
-        lastError?.message ||
-        'Mekânlar yüklenemedi.'
+        error.message || 'Mekânlar yüklenemedi.'
       )
     } finally {
       setMapLoading(false)
@@ -291,11 +266,22 @@ export default function App() {
     const planRequest = (async () => {
       const response = await fetch('/api/plan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ destination: city, travelType })
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          destination: city,
+          travelType
+        })
       })
 
-      const data = await response.json()
+      let data
+
+      try {
+        data = await response.json()
+      } catch {
+        throw new Error('Plan sunucusundan geçerli yanıt alınamadı.')
+      }
 
       if (!response.ok) {
         throw new Error(data.error || 'Plan oluşturulamadı.')
@@ -320,7 +306,10 @@ export default function App() {
         throw new Error('Şehir bulunamadı. Ülke adıyla birlikte dene.')
       }
 
-      return [Number(results[0].lat), Number(results[0].lon)]
+      return [
+        Number(results[0].lat),
+        Number(results[0].lon)
+      ]
     })()
 
     try {
@@ -571,6 +560,7 @@ export default function App() {
                 className="map-canvas"
               >
                 <MapUpdater center={center} />
+
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -584,6 +574,7 @@ export default function App() {
                   const category = categories.find(
                     (item) => item.id === place.category
                   )
+
                   const isSelected = selected.some(
                     (item) => item.id === place.id
                   )
@@ -597,12 +588,14 @@ export default function App() {
                       <Popup>
                         <strong>{place.name}</strong>
                         <p>{category?.label}</p>
+
                         <button
                           type="button"
                           onClick={() => togglePlace(place)}
                         >
                           {isSelected ? 'Rotadan çıkar' : 'Rotaya ekle'}
                         </button>
+
                         <p>
                           <a
                             href={
@@ -715,6 +708,7 @@ export default function App() {
               const category = categories.find(
                 (item) => item.id === place.category
               )
+
               const isSelected = selected.some(
                 (item) => item.id === place.id
               )
@@ -722,12 +716,14 @@ export default function App() {
               return (
                 <article className="place-card" key={place.id}>
                   <div className="place-icon">{category?.icon}</div>
+
                   <div className="place-info">
                     <span className="place-category">
                       {category?.label}
                     </span>
                     <h3>{place.name}</h3>
                   </div>
+
                   <button
                     className={
                       isSelected
