@@ -8,10 +8,12 @@ const [message, setMessage] = useState('')
 const [loading, setLoading] = useState(false)
 
 async function planTrip() {
-if (!destination.trim()) {
-setMessage('Lütfen önce gitmek istediğin şehri yaz.')
-return
-}
+  console.log('PLAN BUTONUNA BASILDI', destination, travelType)
+
+  if (!destination.trim()) {
+    setMessage('Lütfen önce gitmek istediğin şehri yaz.')
+    return
+  }
 
 ```
 setLoading(true)
