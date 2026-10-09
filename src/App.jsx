@@ -6,12 +6,67 @@ const [destination, setDestination] = useState('')
 const [travelType, setTravelType] = useState('Deniz tatili')
 const [message, setMessage] = useState('')
 
-function planTrip() {
+async function planTrip() {
 if (!destination.trim()) {
 setMessage('Lütfen önce gitmek istediğin şehri yaz.')
 return
 }
-setMessage(`${destination} için ${travelType} planlama talebin hazır!`)
+
+setMessage('✈️ Yapay zekâ seyahat planını hazırlıyor...')
+
+try {
+const response = await fetch('/api/plan', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json'
+},
+body: JSON.stringify({ destination, travelType })
+})
+
+```
+const data = await response.json()
+
+if (!response.ok) {
+  throw new Error(data.error || 'Plan oluşturulamadı.')
+}
+
+setMessage(data.plan)
+```
+
+} catch (error) {
+setMessage(error.message || 'Bir hata oluştu. Lütfen tekrar dene.')
+}
+}
+async function planTrip() {
+if (!destination.trim()) {
+setMessage('Lütfen önce gitmek istediğin şehri yaz.')
+return
+}
+
+setMessage('✈️ Yapay zekâ seyahat planını hazırlıyor...')
+
+try {
+const response = await fetch('/api/plan', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json'
+},
+body: JSON.stringify({ destination, travelType })
+})
+
+```
+const data = await response.json()
+
+if (!response.ok) {
+  throw new Error(data.error || 'Plan oluşturulamadı.')
+}
+
+setMessage(data.plan)
+```
+
+} catch (error) {
+setMessage(error.message || 'Bir hata oluştu. Lütfen tekrar dene.')
+}
 }
 
 return (
