@@ -12,7 +12,7 @@ setMessage('Lütfen önce gitmek istediğin şehri yaz.')
 return
 }
 
-```
+
 setLoading(true)
 setMessage('✈️ Seyahat planın hazırlanıyor...')
 
@@ -43,7 +43,7 @@ try {
 } finally {
   setLoading(false)
 }
-```
+
 
 }
 
@@ -69,7 +69,7 @@ gap: '12px'
 <h1 style={{ color: '#2563eb', margin: 0 }}>
 TripPilo AI </h1> <span>Yapay zekâ destekli seyahat planlayıcısı</span> </header>
 
-```
+
   <main style={{ marginTop: '40px' }}>
     <h2>Hayalindeki seyahati planla ✈️</h2>
     <p>Gitmek istediğin şehri ve seyahat türünü seç.</p>
