@@ -2,14 +2,16 @@ import OpenAI from 'openai'
 
 export default async function handler(req, res) {
 if (req.method !== 'POST') {
-return res.status(405).json({ error: 'Bu istek desteklenmiyor.' })
+return res.status(405).json({
+error: 'Bu istek desteklenmiyor.'
+})
 }
 
 try {
 const { destination, travelType } = req.body || {}
 
 ```
-if (!destination?.trim()) {
+if (!destination || !destination.trim()) {
   return res.status(400).json({
     error: 'Lütfen bir şehir veya ülke yaz.'
   })
@@ -17,7 +19,7 @@ if (!destination?.trim()) {
 
 if (!process.env.OPENAI_API_KEY) {
   return res.status(500).json({
-    error: 'Sunucuda API anahtarı ayarlanmamış.'
+    error: 'API anahtarı sunucuda ayarlanmamış.'
   })
 }
 
@@ -30,18 +32,11 @@ const completion = await openai.chat.completions.create({
   messages: [
     {
       role: 'system',
-      content:
-        'Sen TripPilo AI adlı Türkçe seyahat asistanısın. ' +
-        'Kullanıcıya düzenli, anlaşılır bir gezi planı hazırla. ' +
-        'Güncel olarak doğrulanmamış fiyatları ve müsaitlikleri kesin bilgi gibi sunma. ' +
-        'Gezilecek yerler, yemekler, ulaşım ve pratik öneriler ver.'
+      content: 'Sen TripPilo AI adlı Türkçe seyahat asistanısın. Kullanıcıya anlaşılır bir seyahat planı hazırla. Fiyatları ve müsaitliği doğrulamadan kesin bilgi olarak sunma. Ulaşım, yemek, aktiviteler ve pratik ipuçları öner.'
     },
     {
       role: 'user',
-      content:
-        `Destinasyon: ${destination}\n` +
-        `Tatil türü: ${travelType || 'Genel gezi'}\n` +
-        'Bana örnek bir seyahat planı hazırla.'
+      content: `Destinasyon: ${destination}\nTatil türü: ${travelType || 'Genel gezi'}\nBana örnek bir seyahat planı hazırla.`
     }
   ]
 })
@@ -52,13 +47,9 @@ return res.status(200).json({
 ```
 
 } catch (error) {
-console.error('TripPilo AI hatası:', error.message)
-
-```
+console.error('TripPilo AI hatası:', error)
 return res.status(500).json({
-  error: 'Plan oluşturulamadı. API ayarlarını ve kullanım limitini kontrol et.'
+error: 'Plan oluşturulamadı. API ayarlarını ve kullanım limitini kontrol et.'
 })
-```
-
 }
 }
