@@ -11,9 +11,9 @@ const PRODUCTS = [
   },
   {
     id: 'membership',
-    title: 'TripPilo Üyeliği',
-    description: 'Üyelik seçeneğini satın almak için ödeme başlat.',
-    price: '1 USD'
+    title: 'TripPilo Pro — Yıllık Üyelik',
+    description: 'TripPilo Pro üyeliği. 1 yıllık abonelik.',
+    price: '2.500 USD / yıl'
   }
 ]
 
@@ -95,17 +95,22 @@ export default function App() {
     }
   }
 
-  function copyPaymentAddress() {
+  async function copyPaymentAddress() {
     const address = paymentInfo?.pay_address
 
-    if (!address || !navigator.clipboard) {
-      setPaymentError('Adres kopyalanamadı. Adresi seçip elle kopyalayabilirsin.')
+    if (!address) {
+      setPaymentError('Kopyalanacak ödeme adresi bulunamadı.')
       return
     }
 
-    navigator.clipboard.writeText(address).catch(() => {
-      setPaymentError('Adres kopyalanamadı. Adresi elle kopyalayabilirsin.')
-    })
+    try {
+      await navigator.clipboard.writeText(address)
+      setPaymentError('')
+    } catch {
+      setPaymentError(
+        'Adres otomatik kopyalanamadı. Adresi seçip elle kopyalayabilirsin.'
+      )
+    }
   }
 
   return (
@@ -189,6 +194,7 @@ export default function App() {
                 <h3>Seyahat planın</h3>
               </div>
             </div>
+
             <div className="plan-content">
               {message.split('\n').map((line, index) => (
                 <p className="plan-paragraph" key={index}>
@@ -212,7 +218,10 @@ export default function App() {
               <article className="plan-result" key={product.id}>
                 <h3>{product.title}</h3>
                 <p>{product.description}</p>
-                <p><strong>{product.price}</strong></p>
+                <p>
+                  <strong>{product.price}</strong>
+                </p>
+
                 <button
                   className="primary-button"
                   onClick={() => startPayment(product.id)}
@@ -235,9 +244,12 @@ export default function App() {
           {paymentInfo && (
             <section className="plan-result" aria-live="polite">
               <h3>Ödeme isteği oluşturuldu</h3>
+
               <p>
-                Sipariş numarası: <strong>{paymentInfo.order_id}</strong>
+                Sipariş numarası:{' '}
+                <strong>{paymentInfo.order_id}</strong>
               </p>
+
               <p>
                 Tutar: {paymentInfo.price_amount}{' '}
                 {paymentInfo.price_currency?.toUpperCase()}
@@ -245,7 +257,8 @@ export default function App() {
 
               {paymentInfo.pay_currency && (
                 <p>
-                  Kripto para: {paymentInfo.pay_currency.toUpperCase()}
+                  Kripto para:{' '}
+                  {paymentInfo.pay_currency.toUpperCase()}
                 </p>
               )}
 
@@ -259,6 +272,7 @@ export default function App() {
                   <p style={{ overflowWrap: 'anywhere' }}>
                     {paymentInfo.pay_address}
                   </p>
+
                   <button
                     className="primary-button"
                     onClick={copyPaymentAddress}
