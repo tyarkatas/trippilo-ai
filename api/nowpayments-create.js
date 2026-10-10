@@ -8,7 +8,7 @@ const PRODUCTS = {
   },
   membership: {
     env: "TRIPPILO_MEMBERSHIP_PRICE",
-    description: "TripPilo AI - Uyelik"
+    description: "TripPilo AI - Yillik Pro Uyelik"
   }
 };
 
@@ -16,9 +16,6 @@ const ALLOWED_ORIGIN = "https://trippilo-ai.vercel.app";
 
 function validOrigin(req) {
   const origin = req.headers.origin;
-
-  // Origin olmayan sunucu isteklerini de destekle.
-  // Bu kontrol tek başına kimlik doğrulama değildir.
   return !origin || origin === ALLOWED_ORIGIN;
 }
 
@@ -53,6 +50,19 @@ async function updateOrder(config, orderId, values) {
       updated_at: new Date().toISOString()
     })
   });
+}
+
+function providerErrorMessage(payment) {
+  const message =
+    payment?.message ||
+    payment?.error ||
+    payment?.description;
+
+  if (typeof message === "string") {
+    return message.slice(0, 500);
+  }
+
+  return "Saglayici ayrintili hata mesaji dondurmedi.";
 }
 
 export default async function handler(req, res) {
@@ -95,8 +105,13 @@ export default async function handler(req, res) {
   const config = getSupabaseConfig();
 
   if (!apiKey || !config) {
+    console.error("Payment configuration missing", {
+      api_key_present: Boolean(apiKey),
+      supabase_config_present: Boolean(config)
+    });
+
     return res.status(500).json({
-      error: "Sunucu ayarlari eksik."
+      error: "Sunucu ayarlari eksik. Vercel ortam degiskenlerini kontrol edin."
     });
   }
 
@@ -104,7 +119,8 @@ export default async function handler(req, res) {
 
   if (!Number.isFinite(amount) || amount <= 0) {
     return res.status(500).json({
-      error: "Urun fiyati ayarlanmamis."
+      error: "Urun fiyati ayarlanmamis veya gecersiz.",
+      price_variable: product.env
     });
   }
 
@@ -130,8 +146,16 @@ export default async function handler(req, res) {
     );
 
     if (!insert.ok) {
+      const dbError = await insert.text().catch(() => "");
+
+      console.error("Payment order insert failed", {
+        http_status: insert.status,
+        details: dbError.slice(0, 500),
+        order_id: orderId
+      });
+
       return res.status(502).json({
-        error: "Siparis kaydedilemedi."
+        error: "Siparis veritabanina kaydedilemedi. Supabase ayarlarini kontrol edin."
       });
     }
 
@@ -154,15 +178,43 @@ export default async function handler(req, res) {
       }
     );
 
-    const payment = await response.json().catch(() => ({}));
+    const responseText = await response.text();
+    let payment = {};
+
+    try {
+      payment = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      payment = {};
+    }
 
     if (!response.ok || !payment.payment_id) {
+      const providerMessage = providerErrorMessage(payment);
+      const providerCode =
+        payment?.code || payment?.error_code || null;
+
+      console.error("NOWPayments create-payment failed", {
+        http_status: response.status,
+        provider_message: providerMessage,
+        provider_code: providerCode,
+        order_id: orderId,
+        product_type,
+        amount
+      });
+
       await updateOrder(config, orderId, {
         status: "failed"
-      }).catch(() => null);
+      }).catch((error) => {
+        console.error("Failed to update payment status", {
+          order_id: orderId,
+          message: error?.message || "Unknown error"
+        });
+      });
 
       return res.status(502).json({
-        error: "Odeme olusturulamadi. Saglayici ayarlarini kontrol edin."
+        error: "NOWPayments odeme olusturamadi.",
+        provider_status: response.status,
+        provider_message: providerMessage,
+        provider_code: providerCode
       });
     }
 
@@ -172,10 +224,14 @@ export default async function handler(req, res) {
     });
 
     if (!update.ok) {
-      // Odeme saglayicida olusmus olabilir.
-      // Bu durumda yeni odeme olusturmayin; kaydi kontrol edin.
+      console.error("Payment created but order update failed", {
+        order_id: orderId,
+        payment_id: String(payment.payment_id),
+        http_status: update.status
+      });
+
       return res.status(502).json({
-        error: "Odeme olustu ancak siparis kaydi guncellenemedi. Destekle iletisime gecin.",
+        error: "Odeme saglayicida olustu ancak siparis kaydi guncellenemedi. Ayni odemeyi tekrar olusturmadan once kaydi kontrol edin.",
         order_id: orderId
       });
     }
@@ -190,9 +246,14 @@ export default async function handler(req, res) {
       price_amount: amount,
       price_currency: "usd"
     });
-  } catch {
+  } catch (error) {
+    console.error("Payment request failed", {
+      order_id: orderId,
+      message: error?.message || "Unknown error"
+    });
+
     return res.status(500).json({
-      error: "Odeme istegi islenemedi."
+      error: "Odeme istegi islenemedi. Vercel Function Logs kayitlarini kontrol edin."
     });
   }
 }
