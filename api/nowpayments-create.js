@@ -12,21 +12,77 @@ const PRODUCTS = {
   }
 };
 
+const ALLOWED_ORIGIN = "https://trippilo-ai.vercel.app";
+
+function validOrigin(req) {
+  const origin = req.headers.origin;
+
+  // Origin olmayan sunucu isteklerini de destekle.
+  // Bu kontrol tek başına kimlik doğrulama değildir.
+  return !origin || origin === ALLOWED_ORIGIN;
+}
+
+function getSupabaseConfig() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY;
+
+  if (!url || !key) return null;
+
+  return {
+    base: url.replace(/\/$/, ""),
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json"
+    }
+  };
+}
+
+async function updateOrder(config, orderId, values) {
+  const url = new URL(`${config.base}/rest/v1/payments`);
+  url.searchParams.set("order_id", `eq.${orderId}`);
+
+  return fetch(url, {
+    method: "PATCH",
+    headers: {
+      ...config.headers,
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify({
+      ...values,
+      updated_at: new Date().toISOString()
+    })
+  });
+}
+
 export default async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Vary", "Origin");
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Yalnizca POST destekleniyor." });
+    return res.status(405).json({
+      error: "Yalnizca POST destekleniyor."
+    });
   }
 
-  const apiKey = process.env.NOWPAYMENTS_API_KEY;
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-
-  if (!apiKey || !supabaseUrl || !supabaseKey) {
-    return res.status(500).json({ error: "Sunucu ayarlari eksik." });
+  if (!validOrigin(req)) {
+    return res.status(403).json({
+      error: "Istek kaynagi kabul edilmiyor."
+    });
   }
 
-  const { product_type } = req.body || {};
+  if (
+    !req.body ||
+    typeof req.body !== "object" ||
+    Array.isArray(req.body)
+  ) {
+    return res.status(400).json({
+      error: "Gecersiz istek govdesi."
+    });
+  }
+
+  const { product_type } = req.body;
   const product = PRODUCTS[product_type];
 
   if (!product) {
@@ -35,87 +91,93 @@ export default async function handler(req, res) {
     });
   }
 
+  const apiKey = process.env.NOWPAYMENTS_API_KEY;
+  const config = getSupabaseConfig();
+
+  if (!apiKey || !config) {
+    return res.status(500).json({
+      error: "Sunucu ayarlari eksik."
+    });
+  }
+
   const amount = Number(process.env[product.env]);
+
   if (!Number.isFinite(amount) || amount <= 0) {
-    return res.status(500).json({ error: "Urun fiyati ayarlanmamis." });
+    return res.status(500).json({
+      error: "Urun fiyati ayarlanmamis."
+    });
   }
 
   const orderId = randomUUID();
-  const base = supabaseUrl.replace(/\/$/, "");
-  const headers = {
-    apikey: supabaseKey,
-    Authorization: `Bearer ${supabaseKey}`,
-    "Content-Type": "application/json"
-  };
 
   try {
-    const insert = await fetch(`${base}/rest/v1/payments`, {
-      method: "POST",
-      headers: { ...headers, Prefer: "return=minimal" },
-      body: JSON.stringify({
-        order_id: orderId,
-        product_type,
-        amount,
-        currency: "usd",
-        status: "pending"
-      })
-    });
+    const insert = await fetch(
+      `${config.base}/rest/v1/payments`,
+      {
+        method: "POST",
+        headers: {
+          ...config.headers,
+          Prefer: "return=minimal"
+        },
+        body: JSON.stringify({
+          order_id: orderId,
+          product_type,
+          amount,
+          currency: "usd",
+          status: "pending"
+        })
+      }
+    );
 
     if (!insert.ok) {
-      return res.status(502).json({ error: "Siparis kaydedilemedi." });
+      return res.status(502).json({
+        error: "Siparis kaydedilemedi."
+      });
     }
 
-    const response = await fetch("https://api.nowpayments.io/v1/payment", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        price_amount: amount,
-        price_currency: "usd",
-        order_id: orderId,
-        order_description: product.description,
-        ipn_callback_url:
-          "https://trippilo-ai.vercel.app/api/nowpayments-ipn"
-      })
-    });
+    const response = await fetch(
+      "https://api.nowpayments.io/v1/payment",
+      {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          price_amount: amount,
+          price_currency: "usd",
+          order_id: orderId,
+          order_description: product.description,
+          ipn_callback_url:
+            "https://trippilo-ai.vercel.app/api/nowpayments-ipn"
+        })
+      }
+    );
 
     const payment = await response.json().catch(() => ({}));
 
     if (!response.ok || !payment.payment_id) {
-      const failedUrl = new URL(`${base}/rest/v1/payments`);
-      failedUrl.searchParams.set("order_id", `eq.${orderId}`);
-
-      await fetch(failedUrl, {
-        method: "PATCH",
-        headers: { ...headers, Prefer: "return=minimal" },
-        body: JSON.stringify({
-          status: "failed",
-          updated_at: new Date().toISOString()
-        })
-      });
+      await updateOrder(config, orderId, {
+        status: "failed"
+      }).catch(() => null);
 
       return res.status(502).json({
-        error: "Odeme olusturulamadi; saglayici ayarlarini kontrol edin."
+        error: "Odeme olusturulamadi. Saglayici ayarlarini kontrol edin."
       });
     }
 
-    const updateUrl = new URL(`${base}/rest/v1/payments`);
-    updateUrl.searchParams.set("order_id", `eq.${orderId}`);
-
-    const update = await fetch(updateUrl, {
-      method: "PATCH",
-      headers: { ...headers, Prefer: "return=minimal" },
-      body: JSON.stringify({
-        payment_id: String(payment.payment_id),
-        status: "waiting",
-        updated_at: new Date().toISOString()
-      })
+    const update = await updateOrder(config, orderId, {
+      payment_id: String(payment.payment_id),
+      status: "waiting"
     });
 
     if (!update.ok) {
-      return res.status(502).json({ error: "Odeme kaydi guncellenemedi." });
+      // Odeme saglayicida olusmus olabilir.
+      // Bu durumda yeni odeme olusturmayin; kaydi kontrol edin.
+      return res.status(502).json({
+        error: "Odeme olustu ancak siparis kaydi guncellenemedi. Destekle iletisime gecin.",
+        order_id: orderId
+      });
     }
 
     return res.status(201).json({
@@ -129,6 +191,8 @@ export default async function handler(req, res) {
       price_currency: "usd"
     });
   } catch {
-    return res.status(500).json({ error: "Odeme istegi islenemedi." });
+    return res.status(500).json({
+      error: "Odeme istegi islenemedi."
+    });
   }
 }
