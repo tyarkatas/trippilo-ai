@@ -7,10 +7,10 @@ export default async function handler(req, res) {
     });
   }
 
-  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const token = (process.env.TELEGRAM_BOT_TOKEN || "").trim();
   const secret = (process.env.TELEGRAM_WEBHOOK_SECRET || "").trim();
-  const setupKey = process.env.TELEGRAM_SETUP_KEY;
-  const suppliedKey = req.query.key;
+  const setupKey = (process.env.TELEGRAM_SETUP_KEY || "").trim();
+  const suppliedKey = String(req.query.key || "").trim();
 
   if (!token || !secret || !setupKey) {
     return res.status(500).json({
@@ -22,14 +22,14 @@ export default async function handler(req, res) {
   if (suppliedKey !== setupKey) {
     return res.status(401).json({
       ok: false,
-      error: "Yetkisiz istek.",
+      error: "TELEGRAM_SETUP_KEY eşleşmiyor.",
     });
   }
 
-  if (!/^[A-Za-z0-9_-]{1,256}$/.test(secret)) {
+  if (secret.length < 1 || secret.length > 256) {
     return res.status(400).json({
       ok: false,
-      error: "Webhook secret geçersiz. Yalnızca harf, rakam, _ ve - kullan.",
+      error: "TELEGRAM_WEBHOOK_SECRET boş veya çok uzun.",
     });
   }
 
@@ -38,9 +38,11 @@ export default async function handler(req, res) {
       `https://api.telegram.org/bot${token}/setWebhook`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          url: `https://${req.headers.host}/api/telegram`,
+          url: "https://trippilo-ai.vercel.app/api/telegram",
           secret_token: secret,
         }),
       }
@@ -48,11 +50,23 @@ export default async function handler(req, res) {
 
     const result = await response.json();
 
-    return res.status(response.ok && result.ok ? 200 : 502).json({
-      ok: Boolean(response.ok && result.ok),
-      description: result.description || "Telegram webhook kurulumu tamamlandı.",
+    if (!response.ok || !result.ok) {
+      console.error("Telegram webhook kurulamadı:", result.description);
+
+      return res.status(502).json({
+        ok: false,
+        error: "Telegram webhook kurulamadı.",
+        description: result.description || "Telegram API hatası.",
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      description: "Telegram webhook başarıyla kuruldu.",
     });
-  } catch {
+  } catch (error) {
+    console.error("Webhook kurulum hatası:", error?.message);
+
     return res.status(502).json({
       ok: false,
       error: "Telegram sunucusuna bağlanılamadı.",
