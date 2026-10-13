@@ -7,7 +7,7 @@ const PRODUCTS = [
     id: 'travel_plan',
     title: 'Kişisel Seyahat Planı',
     description: 'Sana özel yapay zekâ destekli seyahat planı.',
-    price: '5 USDT',
+    price: '12 USDT',
   },
   {
     id: 'membership',
