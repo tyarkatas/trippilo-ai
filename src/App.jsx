@@ -7,14 +7,14 @@ const PRODUCTS = [
     id: 'travel_plan',
     title: 'Kişisel Seyahat Planı',
     description: 'Sana özel yapay zekâ destekli seyahat planı.',
-    price: '1 USD'
+    price: '5 USDT',
   },
   {
     id: 'membership',
     title: 'TripPilo Pro — Yıllık Üyelik',
     description: 'TripPilo Pro üyeliği. 1 yıllık abonelik.',
-    price: '2.500 USD / yıl'
-  }
+    price: '2.500 USD / yıl',
+  },
 ]
 
 export default function App() {
@@ -22,8 +22,10 @@ export default function App() {
   const [travelType, setTravelType] = useState('Kültür gezisi')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+
   const [paymentLoading, setPaymentLoading] = useState('')
   const [paymentInfo, setPaymentInfo] = useState(null)
+  const [paymentProduct, setPaymentProduct] = useState(null)
   const [paymentError, setPaymentError] = useState('')
   const [paymentCopied, setPaymentCopied] = useState(false)
 
@@ -42,12 +44,12 @@ export default function App() {
       const response = await fetch('/api/plan', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           destination: city,
-          travelType
-        })
+          travelType,
+        }),
       })
 
       const data = await response.json()
@@ -65,8 +67,18 @@ export default function App() {
   }
 
   async function startPayment(productType) {
+    const selectedProduct = PRODUCTS.find(
+      (product) => product.id === productType
+    )
+
+    if (!selectedProduct) {
+      setPaymentError('Seçilen ürün bulunamadı.')
+      return
+    }
+
     setPaymentLoading(productType)
     setPaymentInfo(null)
+    setPaymentProduct(selectedProduct)
     setPaymentError('')
     setPaymentCopied(false)
 
@@ -74,11 +86,11 @@ export default function App() {
       const response = await fetch('/api/nowpayments-create', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          product_type: productType
-        })
+          product_type: productType,
+        }),
       })
 
       const data = await response.json()
@@ -86,8 +98,8 @@ export default function App() {
       if (!response.ok) {
         throw new Error(
           data.provider_message ||
-          data.error ||
-          'Ödeme başlatılamadı.'
+            data.error ||
+            'Ödeme başlatılamadı.'
         )
       }
 
@@ -138,7 +150,7 @@ export default function App() {
     } catch {
       setPaymentCopied(false)
       setPaymentError(
-        'Otomatik kopyalama başarısız. Aşağıdaki adresi seçip elle kopyalayabilirsin.'
+        'Otomatik kopyalama başarısız. Adresi seçip elle kopyalayabilirsin.'
       )
     }
   }
@@ -206,6 +218,7 @@ export default function App() {
           </div>
 
           <button
+            type="button"
             className="primary-button"
             onClick={planTrip}
             disabled={loading}
@@ -253,6 +266,7 @@ export default function App() {
                 </p>
 
                 <button
+                  type="button"
                   className="primary-button"
                   onClick={() => startPayment(product.id)}
                   disabled={Boolean(paymentLoading)}
@@ -273,7 +287,14 @@ export default function App() {
 
           {paymentInfo && (
             <section className="plan-result" aria-live="polite">
+              <span className="eyebrow">ÖDEME BİLGİLERİ</span>
               <h3>Ödeme isteği oluşturuldu</h3>
+
+              {paymentProduct && (
+                <p>
+                  Ürün: <strong>{paymentProduct.title}</strong>
+                </p>
+              )}
 
               <p>
                 Sipariş numarası:{' '}
@@ -281,20 +302,26 @@ export default function App() {
               </p>
 
               <p>
-                Tutar: {paymentInfo.price_amount}{' '}
-                {paymentInfo.price_currency?.toUpperCase()}
+                Sipariş tutarı:{' '}
+                <strong>
+                  {paymentInfo.price_amount}{' '}
+                  {paymentInfo.price_currency?.toUpperCase()}
+                </strong>
               </p>
 
               {paymentInfo.pay_currency && (
                 <p>
-                  Kripto para:{' '}
-                  {paymentInfo.pay_currency.toUpperCase()}
+                  Ödeme para birimi:{' '}
+                  <strong>
+                    {paymentInfo.pay_currency.toUpperCase()}
+                  </strong>
                 </p>
               )}
 
               {paymentInfo.pay_amount != null && (
                 <p>
-                  Ödenecek miktar: {paymentInfo.pay_amount}
+                  Ödenecek kripto miktarı:{' '}
+                  <strong>{paymentInfo.pay_amount}</strong>
                 </p>
               )}
 
@@ -308,7 +335,7 @@ export default function App() {
                       userSelect: 'all',
                       padding: '12px',
                       border: '1px solid #d1d5db',
-                      borderRadius: '8px'
+                      borderRadius: '8px',
                     }}
                   >
                     {paymentInfo.pay_address}
@@ -333,8 +360,10 @@ export default function App() {
               )}
 
               <p>
-                Bu yalnızca ödeme isteğinin oluşturulduğunu gösterir.
-                Ödeme tamamlanmış sayılmaz; onay sunucudan doğrulanmalıdır.
+                Bu ekran yalnızca ödeme isteğinin oluşturulduğunu
+                gösterir. Ödeme tamamlanmış sayılmaz; sunucudan
+                doğrulanması gerekir. Ödeme göndermeden önce tutarı,
+                ağı ve adresi kontrol et.
               </p>
             </section>
           )}
